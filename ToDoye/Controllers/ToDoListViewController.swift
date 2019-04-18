@@ -7,10 +7,14 @@
 //
 
 import UIKit
+import CoreData
 
 class ToDoListViewController: UITableViewController {
     
     var item_array = [Item]()
+    
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    
     
     let data_file_path = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
     
@@ -19,21 +23,8 @@ class ToDoListViewController: UITableViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-    
         
-        let new_Item1 = Item()
-        new_Item1.title = "find coffee"
-        item_array.append(new_Item1)
-        
-        let new_Item2 = Item()
-        new_Item2.title = "drink coffee"
-        item_array.append(new_Item2)
-        
-        let new_Item3 = Item()
-        new_Item3.title = "do stupid things faster"
-        item_array.append(new_Item3)
-        
-        self.loadItems()
+    self.loadItems()
         
     }
     
@@ -64,7 +55,10 @@ class ToDoListViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         //print(item_array[indexPath.row])
         
-        item_array[indexPath.row].done = !item_array[indexPath.row].done
+        item_array.remove(at: indexPath.row)
+        context.delete(item_array[indexPath.row])
+        
+//        item_array[indexPath.row].done = !item_array[indexPath.row].done
         
         self.saveItem()
 
@@ -83,8 +77,11 @@ class ToDoListViewController: UITableViewController {
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
             // what will happen once the user clicks the user ADD imte on the UIalert
             
-            let new_Item_t = Item()
+            
+        let new_Item_t = Item(context: self.context)
+            
             new_Item_t.title = textField.text!
+            new_Item_t.done = false
             self.item_array.append(new_Item_t)
             
             self.saveItem()
@@ -104,13 +101,12 @@ class ToDoListViewController: UITableViewController {
     // this is saving at item to plis
     
     func saveItem() {
-        
-        let encoder = PropertyListEncoder()
+
         do {
-            let data = try encoder.encode(item_array)
-            try data.write(to: data_file_path!)
+            try self.context.save()
         } catch {
-            print("error encoding item array")
+            print("error saving context")
+
             
         }
         
@@ -122,22 +118,41 @@ class ToDoListViewController: UITableViewController {
     
     // this is loading data from plis
     
-    func loadItems() {
+    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest() ) {
         
-        
-        if let data = try? Data(contentsOf: data_file_path!) {
-            let decoder = PropertyListDecoder()
-            
-            do {
-            item_array = try decoder.decode([Item].self, from: data)
-            } catch {
-                print("decoder error")
-            }
+        do {
+          item_array = try context.fetch(request)
+        } catch {
+            print("request error \(error) ")
         }
-        
         
     }
     
+    
+}
+
+//MARK: search bar methods
+
+extension ToDoListViewController : UISearchBarDelegate {
+    
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        let request : NSFetchRequest<Item> = Item.fetchRequest()
+        request.predicate  = NSPredicate.init(format: "title CONTAINS[cd] %@", searchBar.text!)
+        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+        loadItems(with: request)
+        
+    }
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchBar.text?.count == 0 {
+            self.loadItems()
+            
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
+            }
+        }
+        
+    }
     
 }
 
