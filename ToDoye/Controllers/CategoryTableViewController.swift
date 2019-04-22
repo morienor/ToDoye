@@ -7,9 +7,11 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 class CategoryTableViewController: UITableViewController {
+    
+    let realm = try! Realm()
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -32,9 +34,6 @@ class CategoryTableViewController: UITableViewController {
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
     }
     
-    //MARK:  - TableView data source methods
-    //MARK: - TableView deligate methods
-    //MARK: - Data manipulation methods
     
 
 }
